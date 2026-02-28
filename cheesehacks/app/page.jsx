@@ -10,8 +10,6 @@ const MADISON_CENTER = {
   zoom: 12
 };
 
-const PARCEL_API = 'https://maps.cityofmadison.com/arcgis/rest/services/Planning/Zoning/MapServer/3/query';
-
 const parcelLayerStyle = {
   id: 'parcel-layer',
   type: 'fill',
@@ -32,39 +30,9 @@ const parcelHighlightStyle = {
 };
 
 async function fetchParcels() {
-  const bounds = {
-    xmin: -89.5,
-    ymin: 43.0,
-    xmax: -89.25,
-    ymax: 43.15
-  };
-  
-  const url = `${PARCEL_API}?where=1%3D1&outFields=OwnerName1,OwnerName2,Address,PropertyUse,Zoning1&returnGeometry=true&f=json&outSR=4326&geometry=${bounds.xmin},${bounds.ymin},${bounds.xmax},${bounds.ymax}&spatialRel=esriSpatialRelIntersects&resultRecordCount=2000`;
-  
-  console.log('Fetching from:', url);
-  
-  const response = await fetch(url);
+  const response = await fetch('/madison_parcels.json');
   const data = await response.json();
-  
-  console.log('API response:', data);
-  
-  // Convert ArcGIS geometry to GeoJSON
-  if (data.features && data.features.length > 0) {
-    const geojson = {
-      type: 'FeatureCollection',
-      features: data.features.map(f => ({
-        type: 'Feature',
-        properties: f.attributes,
-        geometry: {
-          type: 'Polygon',
-          coordinates: f.geometry.rings
-        }
-      }))
-    };
-    console.log('Converted GeoJSON:', geojson);
-    return geojson;
-  }
-  
+  console.log('Loaded parcel data:', data);
   return data;
 }
 
@@ -134,9 +102,12 @@ export default function ParcelMap() {
   const handleMapClick = (event) => {
     if (!mapRef.current || !parcelData) return;
     
-    const feature = event.features?.[0];
-    if (feature) {
-      setSelectedParcel(feature);
+    const features = mapRef.current.queryRenderedFeatures(event.point, {
+      layers: ['parcel-layer']
+    });
+    
+    if (features.length > 0) {
+      setSelectedParcel(features[0]);
     } else {
       setSelectedParcel(null);
     }
