@@ -13,9 +13,47 @@ export interface Review {
   id?: string;
   parcelId: string;
   userId: string;
+  address: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  rent?: number;
+  waterBill?: number;
+  electricityBill?: number;
+  gasBill?: number;
   rating: number;
+  maintenanceTime?: string;
+  maintenanceQuality?: string;
   comment: string;
   createdAt: Date;
+}
+
+export async function addReview(
+  parcelId: string,
+  userId: string,
+  address: string,
+  rating: number,
+  comment: string,
+  extras?: {
+    bedrooms?: number;
+    bathrooms?: number;
+    rent?: number;
+    waterBill?: number;
+    electricityBill?: number;
+    gasBill?: number;
+    maintenanceTime?: string;
+    maintenanceQuality?: string;
+  }
+): Promise<string> {
+  const docRef = await addDoc(collection(db, 'reviews'), {
+    parcelId,
+    userId,
+    address,
+    ...extras,
+    rating,
+    comment,
+    createdAt: Timestamp.now()
+  });
+  return docRef.id;
 }
 
 export async function getReviewsByParcel(parcelId: string): Promise<Review[]> {
@@ -31,20 +69,4 @@ export async function getReviewsByParcel(parcelId: string): Promise<Review[]> {
     ...doc.data(),
     createdAt: doc.data().createdAt?.toDate() || new Date()
   })) as Review[];
-}
-
-export async function addReview(
-  parcelId: string, 
-  userId: string, 
-  rating: number, 
-  comment: string
-): Promise<string> {
-  const docRef = await addDoc(collection(db, 'reviews'), {
-    parcelId,
-    userId,
-    rating,
-    comment,
-    createdAt: Timestamp.now()
-  });
-  return docRef.id;
 }

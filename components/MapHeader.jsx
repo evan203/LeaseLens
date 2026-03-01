@@ -1,9 +1,9 @@
 'use client';
 
 import Auth from './Auth';
-import AddressAutocomplete from '@/components//AddressAutocomplete';
+import AddressAutocomplete from './AddressAutocomplete';
 
-export default function MapHeader({ parcelData, setShowLeaseForm }) {
+export default function MapHeader({ parcelData, onSearchAddress, onOpenLeaseForm }) {
   return (
     <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 w-80">
       <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
@@ -12,9 +12,7 @@ export default function MapHeader({ parcelData, setShowLeaseForm }) {
       <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
         <AddressAutocomplete
           parcelData={parcelData}
-          onChange={(addr) => {
-            if (addr) flyToAddress(addr);
-          }}
+          onChange={onSearchAddress}
           placeholder="Search address..."
         />
       </div>
@@ -22,7 +20,7 @@ export default function MapHeader({ parcelData, setShowLeaseForm }) {
       <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
         <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
         <button
-          onClick={() => setShowLeaseForm(true)}
+          onClick={onOpenLeaseForm}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
         >
           Add information about your lease
