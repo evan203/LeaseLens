@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import TenantAuth from '@/components/TenantAuth';
+import TenantAuth from './TenantAuth';
 
 const MADISON_CENTER = {
   latitude: 43.0731,
