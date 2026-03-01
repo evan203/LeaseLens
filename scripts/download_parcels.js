@@ -3,7 +3,7 @@ const fs = require('fs');
 const API_URL = 'https://maps.cityofmadison.com/arcgis/rest/services/Planning/Zoning/MapServer/3/query';
 const OUT_FILE = './public/madison_parcels.json';
 
-const FIELDS = 'OwnerName1,OwnerName2,Address,PropertyUse,Zoning1';
+const FIELDS = 'OwnerName1,OwnerName2,Address,PropertyUse,OwnerAddress,OwnerCityStZip';
 const BATCH_SIZE = 1000;
 
 async function fetchParcels(offset = 0) {
