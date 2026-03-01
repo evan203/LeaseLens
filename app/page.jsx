@@ -6,7 +6,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
-import Auth from '../components/Auth'; ``
+import Auth from '../components/Auth';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const MADISON_CENTER = {
   latitude: 43.0731,
@@ -197,6 +198,11 @@ export default function ParcelMap() {
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [highlightedAddresses, setHighlightedAddresses] = useState(null);
+  const [showLeaseForm, setShowLeaseForm] = useState(false);
+  const [leaseFormData, setLeaseFormData] = useState({
+    address: '',
+    rating: 5,
+  });
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -306,19 +312,177 @@ export default function ParcelMap() {
           <h1 className="font-bold text-xl text-gray-800">LeaseLens</h1>
         </div>
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-          <input
-            type="text"
+          <AddressAutocomplete
+            parcelData={parcelData}
+            onChange={(addr) => {
+              if (addr) flyToAddress(addr);
+            }}
             placeholder="Search address..."
-            className="w-full text-sm px-2 py-1 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
           />
         </div>
         <Auth />
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
           <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
+          <button 
+            onClick={() => setShowLeaseForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
+          >
             Add information about your lease
           </button>
         </div>
+
+        {showLeaseForm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800">Submit Lease Information</h2>
+                <button 
+                  onClick={() => setShowLeaseForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); setShowLeaseForm(false); }}>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Your Address
+                    </label>
+                    <AddressAutocomplete
+                      parcelData={parcelData}
+                      onChange={(addr) => setLeaseFormData({ ...leaseFormData, address: addr })}
+                      placeholder="123 Main St, Madison, WI"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Number of Bedrooms
+                    </label>
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
+                      <option value="">Select...</option>
+                      <option value="studio">Studio</option>
+                      <option value="1">1 Bedroom</option>
+                      <option value="2">2 Bedrooms</option>
+                      <option value="3">3 Bedrooms</option>
+                      <option value="4">4 Bedrooms</option>
+                      <option value="5">5+ Bedrooms</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Number of Bathrooms
+                    </label>
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
+                      <option value="">Select...</option>
+                      <option value="1">1 Bathroom</option>
+                      <option value="2">2 Bathroom</option>
+                      <option value="3">3 Bathrooms</option>
+                      <option value="4">4 Bathrooms</option>
+                      <option value="5">5+ Bathrooms</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Monthly Rent
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="1500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Average Monthly Water Bill (Say 0 if included in rent cost)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="100"
+                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Average Monthly Electricity Bill (Say 0 if included in rent cost)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="150"
+                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Average Monthly Gas Bill (Say 0 if included in rent cost)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="60"
+                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rate Your Landlord (1-10)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={leaseFormData.rating}
+                        onChange={(e) => setLeaseFormData({ ...leaseFormData, rating: Number(e.target.value) })}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium text-gray-700 w-8">{leaseFormData.rating}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      How long does it take for maintenance to come out after a request? 
+                    </label>
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
+                      <option value="">Select...</option>
+                      <option value="1">Within a day</option>
+                      <option value="2">2 days</option>
+                      <option value="3">3 days</option>
+                      <option value="4">4 days</option>
+                      <option value="5">5+ days</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      What is the quality of the maintenance?
+                    </label>
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
+                      <option value="">Select...</option>
+                      <option value="1">Terrible, didn't fix anything.</option>
+                      <option value="2">Okay, felt like a band-aid fix.</option>
+                      <option value="3">Good, I am happy with the service.</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Any Questions/Comments
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="What's on your mind about your rent?"
+                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors"
+                >
+                  Submit
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,17 +11,17 @@ export default function NavBar() {
   return (
     <div className="z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4">
       {user ? (
-        <>
-          <span className="text-sm text-gray-600">{user.email}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600 truncate">{user.email}</span>
           <button
             onClick={() => signOutUser()}
-            className="text-sm text-gray-600 hover:text-gray-900"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
           >
             Sign Out
           </button>
-        </>
+        </div>
       ) : (
-        <>
+        <div className="flex items-center gap-4">
           <Link
             href="/login"
             className="text-sm text-gray-600 hover:text-gray-900"
@@ -34,7 +34,7 @@ export default function NavBar() {
           >
             Sign Up
           </Link>
-        </>
+        </div>
       )}
     </div>
   );
