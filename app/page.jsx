@@ -30,6 +30,15 @@ const parcelHighlightStyle = {
   }
 };
 
+const landlordHighlightStyle = {
+  id: 'landlord-highlight',
+  type: 'line',
+  paint: {
+    'line-color': '#dc2626',
+    'line-width': 3
+  }
+};
+
 async function fetchParcels() {
   const response = await fetch('/renters.geojson');
   const data = await response.json();
@@ -37,7 +46,7 @@ async function fetchParcels() {
   return data;
 }
 
-function InfoPanel({ parcel, onClose }) {
+function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress }) {
   if (!parcel) return null;
 
   const address = parcel.properties.Address || 'N/A';
@@ -59,6 +68,12 @@ function InfoPanel({ parcel, onClose }) {
     totalUnits: 24,
     violations: 2,
     lastInspection: '2024-01-10',
+    addresses: [
+      '402 Rushmore Ln',
+      '5604 Schroeder Rd',
+      '4905 Whitcomb Dr',
+      '5726 Russett Rd',
+    ],
   };
 
   return (
@@ -116,7 +131,11 @@ function InfoPanel({ parcel, onClose }) {
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold text-gray-800">Landlord</h3>
           <button 
-            onClick={() => setShowLandlordDetails(!showLandlordDetails)}
+            onClick={() => {
+              const newState = !showLandlordDetails;
+              setShowLandlordDetails(newState);
+              onShowLandlordProperties?.(newState ? mockLandlord.addresses : null);
+            }}
             className="text-xs text-blue-600 hover:underline"
           >
             {showLandlordDetails ? 'View Less' : 'View More'}
@@ -137,7 +156,20 @@ function InfoPanel({ parcel, onClose }) {
               <div>Code Violations: <span className="text-gray-800 font-medium">{mockLandlord.violations}</span></div>
               <div>Last Inspection: <span className="text-gray-800 font-medium">{mockLandlord.lastInspection}</span></div>
             </div>
-            <div className="mt-2 text-gray-500">Additional landlord details would appear here...</div>
+            <div className="mt-3">
+              <div className="font-medium text-gray-800 mb-1">Other Properties:</div>
+              <div className="max-h-24 overflow-y-auto space-y-1">
+                {mockLandlord.addresses.map((addr, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => onSelectAddress?.(addr)}
+                    className="text-gray-600 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                  >
+                    {addr}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -150,6 +182,7 @@ export default function ParcelMap() {
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [highlightedAddresses, setHighlightedAddresses] = useState(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -182,6 +215,17 @@ export default function ParcelMap() {
     }
   };
 
+  const flyToAddress = (address) => {
+    if (!mapRef.current || !parcelData) return;
+    
+    const feature = parcelData.features.find(f => f.properties.Address === address);
+    if (feature) {
+      const [lng, lat] = feature.geometry.coordinates[0][0];
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 16 });
+      setSelectedParcel(feature);
+    }
+  };
+
   const onMapLoad = () => {
     setMapLoaded(true);
   };
@@ -206,6 +250,13 @@ export default function ParcelMap() {
                 filter={['==', 'Address', selectedParcel.properties.Address]}
               />
             )}
+            {highlightedAddresses && (
+              <Layer
+                key={highlightedAddresses.join('-')}
+                {...landlordHighlightStyle}
+                filter={['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]}
+              />
+            )}
           </Source>
         )}
       </Map>
@@ -216,7 +267,7 @@ export default function ParcelMap() {
         </div>
       )}
 
-      <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} />
+      <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} onShowLandlordProperties={setHighlightedAddresses} onSelectAddress={flyToAddress} />
 
       {!loading && !selectedParcel && (
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
@@ -225,11 +276,11 @@ export default function ParcelMap() {
       )}
 
       {/* The Floating Auth Panel */}
-      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2">
-        <div className="bg-white px-4 py-2 rounded-lg shadow-xl border border-gray-200">
-          <h1 className="font-bold text-xl text-gray-1200">LeaseLens</h1>
+      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 w-80">
+        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
+          <h1 className="font-bold text-xl text-gray-800">LeaseLens</h1>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg shadow-xl border border-gray-200">
+        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
           <input 
             type="text" 
             placeholder="Search address..." 
@@ -237,6 +288,12 @@ export default function ParcelMap() {
           />
         </div>
         <TenantAuth />
+        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
+          <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
+            Add information about your lease
+          </button>
+        </div>
       </div>
     </div>
   );
