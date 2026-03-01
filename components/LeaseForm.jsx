@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { addReview } from '@/lib/reviews';
-import { getOrCreateLandlordByAddress } from '@/lib/landlords';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export default function LeaseForm({ parcelData, onClose }) {
@@ -30,15 +29,12 @@ export default function LeaseForm({ parcelData, onClose }) {
 
     setIsSubmitting(true);
     try {
-      const landlordId = await getOrCreateLandlordByAddress(leaseFormData.address);
-      
       await addReview(
         leaseFormData.address,
         'anonymous',
         leaseFormData.address,
         leaseFormData.rating,
         leaseFormData.comment,
-        landlordId || undefined,
         {
           bedrooms: leaseFormData.bedrooms ? parseInt(leaseFormData.bedrooms) : undefined,
           bathrooms: leaseFormData.bathrooms ? parseFloat(leaseFormData.bathrooms) : undefined,
