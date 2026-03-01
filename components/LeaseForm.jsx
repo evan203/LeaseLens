@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { addReview } from '@/lib/reviews';
+import { getOrCreateLandlordByAddress } from '@/lib/landlords';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export default function LeaseForm({ parcelData, onClose }) {
@@ -30,21 +30,26 @@ export default function LeaseForm({ parcelData, onClose }) {
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'reviews'), {
-        parcelId: leaseFormData.address,
-        address: leaseFormData.address,
-        bedrooms: leaseFormData.bedrooms,
-        bathrooms: leaseFormData.bathrooms,
-        rent: leaseFormData.rent,
-        waterBill: leaseFormData.waterBill,
-        electricityBill: leaseFormData.electricityBill,
-        gasBill: leaseFormData.gasBill,
-        rating: leaseFormData.rating,
-        maintenanceTime: leaseFormData.maintenanceTime,
-        maintenanceQuality: leaseFormData.maintenanceQuality,
-        comment: leaseFormData.comment,
-        createdAt: new Date()
-      });
+      const landlordId = await getOrCreateLandlordByAddress(leaseFormData.address);
+      
+      await addReview(
+        leaseFormData.address,
+        'anonymous',
+        leaseFormData.address,
+        leaseFormData.rating,
+        leaseFormData.comment,
+        landlordId || undefined,
+        {
+          bedrooms: leaseFormData.bedrooms ? parseInt(leaseFormData.bedrooms) : undefined,
+          bathrooms: leaseFormData.bathrooms ? parseFloat(leaseFormData.bathrooms) : undefined,
+          rent: leaseFormData.rent ? parseInt(leaseFormData.rent) : undefined,
+          waterBill: leaseFormData.waterBill ? parseInt(leaseFormData.waterBill) : undefined,
+          electricityBill: leaseFormData.electricityBill ? parseInt(leaseFormData.electricityBill) : undefined,
+          gasBill: leaseFormData.gasBill ? parseInt(leaseFormData.gasBill) : undefined,
+          maintenanceTime: leaseFormData.maintenanceTime || undefined,
+          maintenanceQuality: leaseFormData.maintenanceQuality || undefined,
+        }
+      );
 
       onClose();
       setLeaseFormData({
