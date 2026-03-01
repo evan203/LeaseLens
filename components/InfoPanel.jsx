@@ -60,9 +60,6 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
   }, [selectedLandlord, owner, showLandlordListOnly]);
 
   if (!parcel && !showLandlordListOnly) return null;
-  const address = parcel.properties.Address || 'N/A';
-  const owner = parcel.properties.ManagementGroup || 'N/A';
-  const propertyUse = parcel.properties.PropertyUse || 'N/A';
   const distMilesGrocery = parcel.properties.dist_miles_grocery;
   const walkTimeMinsGrocery = parcel.properties.walk_time_mins_grocery;
   const nearestGrocery = parcel.properties.nearest_grocery;

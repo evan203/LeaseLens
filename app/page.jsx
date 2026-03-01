@@ -46,6 +46,7 @@ export default function ParcelMap() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [groceryHeatmapFilter, setGroceryHeatmapFilter] = useState('none');
+  const [landlordListOpen, setLandlordListOpen] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
