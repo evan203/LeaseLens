@@ -13,11 +13,12 @@ import {
 } from '@/components/mapLayers';
 import InfoPanel from '@/components/InfoPanel';
 import MapHeader from '@/components/MapHeader';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { addReview } from '@/lib/reviews';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ParcelMap() {
+  const { user } = useAuth();
   const [parcelData, setParcelData] = useState(null);
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -96,23 +97,30 @@ export default function ParcelMap() {
       return;
     }
 
+    if (!user) {
+      alert('Please sign in to submit a review');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'reviews'), {
-        parcelId: leaseFormData.address,
-        address: leaseFormData.address,
-        bedrooms: leaseFormData.bedrooms,
-        bathrooms: leaseFormData.bathrooms,
-        rent: leaseFormData.rent,
-        waterBill: leaseFormData.waterBill,
-        electricityBill: leaseFormData.electricityBill,
-        gasBill: leaseFormData.gasBill,
-        rating: leaseFormData.rating,
-        maintenanceTime: leaseFormData.maintenanceTime,
-        maintenanceQuality: leaseFormData.maintenanceQuality,
-        comment: leaseFormData.comment,
-        createdAt: new Date()
-      });
+      await addReview(
+        leaseFormData.address,
+        user.uid,
+        leaseFormData.address,
+        leaseFormData.rating,
+        leaseFormData.comment,
+        {
+          bedrooms: leaseFormData.bedrooms ? parseInt(leaseFormData.bedrooms) : undefined,
+          bathrooms: leaseFormData.bathrooms ? parseInt(leaseFormData.bathrooms) : undefined,
+          rent: leaseFormData.rent ? parseInt(leaseFormData.rent) : undefined,
+          waterBill: leaseFormData.waterBill ? parseInt(leaseFormData.waterBill) : undefined,
+          electricityBill: leaseFormData.electricityBill ? parseInt(leaseFormData.electricityBill) : undefined,
+          gasBill: leaseFormData.gasBill ? parseInt(leaseFormData.gasBill) : undefined,
+          maintenanceTime: leaseFormData.maintenanceTime || undefined,
+          maintenanceQuality: leaseFormData.maintenanceQuality || undefined,
+        }
+      );
 
       setShowLeaseForm(false);
       setLeaseFormData({
