@@ -4,12 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MADISON_CENTER, MAP_STYLE } from '@/components/mapConstants';
-import { fetchParcels } from '@/lib/fetchParcels';
+import { fetchParcels, fetchBusStops, fetchBusRoutes } from '@/lib/fetchParcels';
 import {
   parcelLayerStyle,
   parcelHighlightStyle,
   landlordHighlightStyle,
-  landlordHighlightFillStyle
+  landlordHighlightFillStyle,
+  groceryHeatmapStyle,
+  busStopStyle,
+  busRouteStyle
 } from '@/components/mapLayers';
 import InfoPanel from '@/components/InfoPanel';
 import MapHeader from '@/components/MapHeader';
@@ -20,6 +23,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ParcelMap() {
   const { user } = useAuth();
   const [parcelData, setParcelData] = useState(null);
+  const [busStopsData, setBusStopsData] = useState(null);
+  const [busRoutesData, setBusRoutesData] = useState(null);
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -39,6 +44,7 @@ export default function ParcelMap() {
     comment: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [groceryHeatmapFilter, setGroceryHeatmapFilter] = useState('none');
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +64,22 @@ export default function ParcelMap() {
       .catch(err => {
         console.error('Failed to fetch parcels:', err);
         setLoading(false);
+      });
+
+    fetchBusStops()
+      .then(data => {
+        setBusStopsData(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch bus stops:', err);
+      });
+
+    fetchBusRoutes()
+      .then(data => {
+        setBusRoutesData(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch bus routes:', err);
       });
   }, []);
 
@@ -157,6 +179,7 @@ export default function ParcelMap() {
 
         {mapLoaded && parcelData && (
           <Source id="parcels" type="geojson" data={parcelData}>
+            {groceryHeatmapFilter !== 'none' && <Layer {...groceryHeatmapStyle} />}
             <Layer {...parcelLayerStyle} />
             {selectedParcel && (
               <Layer
@@ -184,6 +207,18 @@ export default function ParcelMap() {
             )}
           </Source>
         )}
+
+        {mapLoaded && busStopsData && (
+          <Source id="bus-stops" type="geojson" data={busStopsData}>
+            <Layer {...busStopStyle} />
+          </Source>
+        )}
+
+        {mapLoaded && busRoutesData && (
+          <Source id="bus-routes" type="geojson" data={busRoutesData}>
+            <Layer {...busRouteStyle} />
+          </Source>
+        )}
       </Map>
 
       {loading && (
@@ -207,6 +242,8 @@ export default function ParcelMap() {
         parcelData={parcelData}
         onSearchAddress={flyToAddress}
         onOpenLeaseForm={() => setShowLeaseForm(true)}
+        groceryHeatmapFilter={groceryHeatmapFilter}
+        setGroceryHeatmapFilter={setGroceryHeatmapFilter}
       />
 
       {showLeaseForm && (

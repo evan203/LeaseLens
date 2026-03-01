@@ -4,7 +4,18 @@ import Auth from './Auth';
 import AddressAutocomplete from './AddressAutocomplete';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function MapHeader({ parcelData, onSearchAddress, onOpenLeaseForm }) {
+export default function MapHeader({ 
+  parcelData, 
+  onSearchAddress, 
+  onOpenLeaseForm, 
+  groceryHeatmapFilter, 
+  setGroceryHeatmapFilter,
+  pharmacyHeatmapFilter,
+  setPharmacyHeatmapFilter,
+  gymHeatmapFilter,
+  setGymHeatmapFilter
+}) {
+{
   const { user, loading } = useAuth();
 
   return (
@@ -18,6 +29,48 @@ export default function MapHeader({ parcelData, onSearchAddress, onOpenLeaseForm
           onChange={onSearchAddress}
           placeholder="Search address..."
         />
+      </div>
+      <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Grocery Walkability
+          </label>
+          <select
+            value={groceryHeatmapFilter}
+            onChange={(e) => setGroceryHeatmapFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500 text-sm"
+          >
+            <option value="none">Off</option>
+            <option value="walkability">Show on map</option>
+            <option value="heatmap">Heatmap</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Pharmacy Walkability
+          </label>
+          <select
+            value={pharmacyHeatmapFilter}
+            onChange={(e) => setPharmacyHeatmapFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500 text-sm"
+          >
+            <option value="none">Off</option>
+            <option value="walkability">Show on map</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Gym Walkability
+          </label>
+          <select
+            value={gymHeatmapFilter}
+            onChange={(e) => setGymHeatmapFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500 text-sm"
+          >
+            <option value="none">Off</option>
+            <option value="walkability">Show on map</option>
+          </select>
+        </div>
       </div>
       <Auth />
       {user && !loading && (
@@ -33,4 +86,5 @@ export default function MapHeader({ parcelData, onSearchAddress, onOpenLeaseForm
       )}
     </div>
   );
+}
 }

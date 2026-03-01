@@ -15,6 +15,27 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
   const address = parcel.properties.Address || 'N/A';
   const owner = parcel.properties.ManagementGroup || 'N/A';
   const propertyUse = parcel.properties.PropertyUse || 'N/A';
+  const distMilesGrocery = parcel.properties.dist_miles_grocery;
+  const walkTimeMinsGrocery = parcel.properties.walk_time_mins_grocery;
+  const nearestGrocery = parcel.properties.nearest_grocery;
+  const hasGroceryData = distMilesGrocery !== undefined || walkTimeMinsGrocery !== undefined;
+
+  const distMilesPharmacy = parcel.properties.dist_miles_pharmacy;
+  const walkTimeMinsPharmacy = parcel.properties.walk_time_mins_pharmacy;
+  const nearestPharmacy = parcel.properties.nearest_pharmacy;
+  const hasPharmacyData = distMilesPharmacy !== undefined || walkTimeMinsPharmacy !== undefined;
+
+  const distMilesGym = parcel.properties.dist_miles_gym;
+  const walkTimeMinsGym = parcel.properties.walk_time_mins_gym;
+  const nearestGym = parcel.properties.nearest_gym;
+  const hasGymData = distMilesGym !== undefined || walkTimeMinsGym !== undefined;
+
+  const distMilesCampus = parcel.properties.dist_miles_campus;
+  const walkTimeMinsCampus = parcel.properties.walk_time_mins_campus;
+  const hasCampusData = distMilesCampus !== undefined || walkTimeMinsCampus !== undefined;
+
+  console.log('Parcel props:', parcel.properties);
+  console.log('Grocery data:', { distMilesGrocery, walkTimeMinsGrocery, nearestGrocery, hasGroceryData });
 
   const landlordProperties = parcelData?.features
     .filter(f => f.properties.ManagementGroup === owner)
@@ -54,6 +75,85 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
           <div className="text-xs text-gray-500 uppercase">Property Type</div>
           <div className="text-gray-900">{propertyUse}</div>
         </div>
+        {hasGroceryData && (
+          <div className="bg-green-50 p-3 rounded-md border border-green-200">
+            <div className="text-xs text-green-700 uppercase font-medium mb-1">Nearest Grocery Store</div>
+            {nearestGrocery && nearestGrocery != 'N/A' && <div className="text-sm font-medium text-gray-800">{nearestGrocery}</div>}
+            <div className="flex gap-4 mt-2 text-sm">
+              {distMilesGrocery != undefined && (
+                <div>
+                  <span className="text-gray-600">Distance: </span>
+                  <span className="font-medium text-gray-900">{distMilesGrocery.toFixed(2)} miles</span>
+                </div>
+              )}
+              {walkTimeMinsGrocery != undefined && (
+                <div>
+                  <span className="text-gray-600">Walking: </span>
+                  <span className="font-medium text-gray-900">{walkTimeMinsGrocery} mins</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {hasPharmacyData && (
+          <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+            <div className="text-xs text-blue-700 uppercase font-medium mb-1">Nearest Pharmacy</div>
+            {nearestPharmacy && nearestPharmacy != 'N/A' && <div className="text-sm font-medium text-gray-800">{nearestPharmacy}</div>}
+            <div className="flex gap-4 mt-2 text-sm">
+              {distMilesPharmacy != undefined && (
+                <div>
+                  <span className="text-gray-600">Distance: </span>
+                  <span className="font-medium text-gray-900">{distMilesPharmacy.toFixed(2)} miles</span>
+                </div>
+              )}
+              {walkTimeMinsPharmacy != undefined && (
+                <div>
+                  <span className="text-gray-600">Walking: </span>
+                  <span className="font-medium text-gray-900">{walkTimeMinsPharmacy} mins</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {hasGymData && (
+          <div className="bg-orange-50 p-3 rounded-md border border-orange-200">
+            <div className="text-xs text-orange-700 uppercase font-medium mb-1">Nearest Gym</div>
+            {nearestGym && nearestGym != 'N/A' && <div className="text-sm font-medium text-gray-800">{nearestGym}</div>}
+            <div className="flex gap-4 mt-2 text-sm">
+              {distMilesGym != undefined && (
+                <div>
+                  <span className="text-gray-600">Distance: </span>
+                  <span className="font-medium text-gray-900">{distMilesGym.toFixed(2)} miles</span>
+                </div>
+              )}
+              {walkTimeMinsGym != undefined && (
+                <div>
+                  <span className="text-gray-600">Walking: </span>
+                  <span className="font-medium text-gray-900">{walkTimeMinsGym} mins</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {hasCampusData && (
+          <div className="bg-purple-50 p-3 rounded-md border border-purple-200">
+            <div className="text-xs text-purple-700 uppercase font-medium mb-1">Distance to Campus</div>
+            <div className="flex gap-4 mt-2 text-sm">
+              {distMilesCampus != undefined && (
+                <div>
+                  <span className="text-gray-600">Distance: </span>
+                  <span className="font-medium text-gray-900">{distMilesCampus.toFixed(2)} miles</span>
+                </div>
+              )}
+              {walkTimeMinsCampus != undefined && (
+                <div>
+                  <span className="text-gray-600">Walking: </span>
+                  <span className="font-medium text-gray-900">{walkTimeMinsCampus} mins</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <div className="border-t border-gray-200 p-4">
         <h3 className="font-semibold text-gray-800 mb-2">Reported Rent Data</h3>
