@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDLY0tWOM1rhHoDrfqC-B0t5pKvTdcWbrE",
-  authDomain: "spry-guru-488905-v4.firebaseapp.com",
-  projectId: "spry-guru-488905-v4",
-  storageBucket: "spry-guru-488905-v4.firebasestorage.app",
-  messagingSenderId: "378673513065",
-  appId: "1:378673513065:web:5874d88a5b92f7b719d8f8"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
