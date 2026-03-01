@@ -193,6 +193,7 @@ export default function ParcelMap() {
       )}
 
       <InfoPanel
+        key={selectedParcel?.properties?.Address || 'no-parcel'}
         parcel={selectedParcel}
         onClose={() => {
           setSelectedParcel(null);
