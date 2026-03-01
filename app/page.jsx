@@ -13,6 +13,7 @@ const MADISON_CENTER = {
 
 const parcelLayerStyle = {
   id: 'parcel-layer',
+  source: 'parcels',
   type: 'fill',
   paint: {
     'fill-color': '#6b7280',
@@ -23,6 +24,7 @@ const parcelLayerStyle = {
 
 const parcelHighlightStyle = {
   id: 'parcel-highlight',
+  source: 'parcels',
   type: 'line',
   paint: {
     'line-color': '#2563eb',
@@ -32,10 +34,21 @@ const parcelHighlightStyle = {
 
 const landlordHighlightStyle = {
   id: 'landlord-highlight',
+  source: 'parcels',
   type: 'line',
   paint: {
     'line-color': '#dc2626',
     'line-width': 3
+  }
+};
+
+const landlordHighlightFillStyle = {
+  id: 'landlord-highlight-fill',
+  source: 'parcels',
+  type: 'fill',
+  paint: {
+    'fill-color': '#dc2626',
+    'fill-opacity': 0.2
   }
 };
 
@@ -46,7 +59,7 @@ async function fetchParcels() {
   return data;
 }
 
-function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress }) {
+function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress, parcelData }) {
   if (!parcel) return null;
 
   const address = parcel.properties.Address || 'N/A';
@@ -60,20 +73,19 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
     { beds: 3, baths: 2, rent: 1600, water: 75, utilities: 150, date: '2024-02-20' },
   ];
 
-  const mockLandlord = {
-    name: 'Madison Property Mgmt LLC',
-    properties: 12,
+  const landlordProperties = parcelData?.features
+    .filter(f => f.properties.ManagementGroup === owner)
+    .map(f => f.properties.Address) || [];
+
+  const landlord = {
+    name: owner,
+    properties: landlordProperties.length,
     avgRent: 1450,
     rating: 4.2,
     totalUnits: 24,
     violations: 2,
     lastInspection: '2024-01-10',
-    addresses: [
-      '402 Rushmore Ln',
-      '5604 Schroeder Rd',
-      '4905 Whitcomb Dr',
-      '5726 Russett Rd',
-    ],
+    addresses: landlordProperties,
   };
 
   return (
@@ -134,7 +146,7 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
             onClick={() => {
               const newState = !showLandlordDetails;
               setShowLandlordDetails(newState);
-              onShowLandlordProperties?.(newState ? mockLandlord.addresses : null);
+              onShowLandlordProperties?.(newState ? landlord.addresses : null);
             }}
             className="text-xs text-blue-600 hover:underline"
           >
@@ -142,24 +154,24 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
           </button>
         </div>
         <div className="text-sm">
-          <div className="font-medium text-gray-800">{mockLandlord.name}</div>
+          <div className="font-medium text-gray-800">{landlord.name}</div>
           <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-            <div>Properties: <span className="text-gray-800 font-medium">{mockLandlord.properties}</span></div>
-            <div>Avg Rent: <span className="text-gray-800 font-medium">${mockLandlord.avgRent}</span></div>
-            <div>Rating: <span className="text-gray-800 font-medium">{mockLandlord.rating}/5</span></div>
-            <div>Units: <span className="text-gray-800 font-medium">{mockLandlord.totalUnits}</span></div>
+            <div>Properties: <span className="text-gray-800 font-medium">{landlord.properties}</span></div>
+            <div>Avg Rent: <span className="text-gray-800 font-medium">${landlord.avgRent}</span></div>
+            <div>Rating: <span className="text-gray-800 font-medium">{landlord.rating}/5</span></div>
+            <div>Units: <span className="text-gray-800 font-medium">{landlord.totalUnits}</span></div>
           </div>
         </div>
         {showLandlordDetails && (
           <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
             <div className="grid grid-cols-2 gap-2">
-              <div>Code Violations: <span className="text-gray-800 font-medium">{mockLandlord.violations}</span></div>
-              <div>Last Inspection: <span className="text-gray-800 font-medium">{mockLandlord.lastInspection}</span></div>
+              <div>Code Violations: <span className="text-gray-800 font-medium">{landlord.violations}</span></div>
+              <div>Last Inspection: <span className="text-gray-800 font-medium">{landlord.lastInspection}</span></div>
             </div>
             <div className="mt-3">
               <div className="font-medium text-gray-800 mb-1">Other Properties:</div>
               <div className="max-h-24 overflow-y-auto space-y-1">
-                {mockLandlord.addresses.map((addr, idx) => (
+                {landlord.addresses.map((addr, idx) => (
                   <div 
                     key={idx} 
                     onClick={() => onSelectAddress?.(addr)}
@@ -251,11 +263,22 @@ export default function ParcelMap() {
               />
             )}
             {highlightedAddresses && (
-              <Layer
-                key={highlightedAddresses.join('-')}
-                {...landlordHighlightStyle}
-                filter={['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]}
-              />
+              <React.Fragment key={highlightedAddresses.join('-')}>
+                <Layer
+                  {...landlordHighlightFillStyle}
+                  filter={['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]}
+                />
+                <Layer
+                  {...landlordHighlightStyle}
+                  filter={selectedParcel 
+                    ? ['all', 
+                        ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])],
+                        ['!=', 'Address', selectedParcel.properties.Address]
+                      ]
+                    : ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]
+                  }
+                />
+              </React.Fragment>
             )}
           </Source>
         )}
@@ -267,7 +290,7 @@ export default function ParcelMap() {
         </div>
       )}
 
-      <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} onShowLandlordProperties={setHighlightedAddresses} onSelectAddress={flyToAddress} />
+      <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} onShowLandlordProperties={setHighlightedAddresses} onSelectAddress={flyToAddress} parcelData={parcelData} />
 
       {!loading && !selectedParcel && (
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
