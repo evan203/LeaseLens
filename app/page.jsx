@@ -3,194 +3,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
-import Link from 'next/link';
-import Auth from '../components/Auth';
-import AddressAutocomplete from '../components/AddressAutocomplete';
-
-const MADISON_CENTER = {
-  latitude: 43.0731,
-  longitude: -89.3841,
-  zoom: 13
-};
-
-const parcelLayerStyle = {
-  id: 'parcel-layer',
-  source: 'parcels',
-  type: 'fill',
-  paint: {
-    'fill-color': '#6b7280',
-    'fill-opacity': 0.3,
-    'fill-outline-color': '#374151'
-  }
-};
-
-const parcelHighlightStyle = {
-  id: 'parcel-highlight',
-  source: 'parcels',
-  type: 'line',
-  paint: {
-    'line-color': '#2563eb',
-    'line-width': 2
-  }
-};
-
-const landlordHighlightStyle = {
-  id: 'landlord-highlight',
-  source: 'parcels',
-  type: 'line',
-  paint: {
-    'line-color': '#dc2626',
-    'line-width': 3
-  }
-};
-
-const landlordHighlightFillStyle = {
-  id: 'landlord-highlight-fill',
-  source: 'parcels',
-  type: 'fill',
-  paint: {
-    'fill-color': '#dc2626',
-    'fill-opacity': 0.2
-  }
-};
-
-async function fetchParcels() {
-  const response = await fetch('/renters.geojson');
-  const data = await response.json();
-  console.log('Loaded parcel data:', data);
-  return data;
-}
-function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress, parcelData }) {
-  if (!parcel) return null;
-
-  const address = parcel.properties.Address || 'N/A';
-  const owner = parcel.properties.ManagementGroup || 'N/A';
-  const propertyUse = parcel.properties.PropertyUse || 'N/A';
-
-  const [showLandlordDetails, setShowLandlordDetails] = useState(false);
-
-  const mockRentData = [
-    { beds: 2, baths: 1, rent: 1200, water: 50, utilities: 100, date: '2024-01-15' },
-    { beds: 3, baths: 2, rent: 1600, water: 75, utilities: 150, date: '2024-02-20' },
-  ];
-
-  const landlordProperties = parcelData?.features
-    .filter(f => f.properties.ManagementGroup === owner)
-    .map(f => f.properties.Address) || [];
-
-  const landlord = {
-    name: owner,
-    properties: landlordProperties.length,
-    avgRent: 1450,
-    rating: 4.2,
-    totalUnits: 24,
-    violations: 2,
-    lastInspection: '2024-01-10',
-    addresses: landlordProperties,
-  };
-
-  return (
-    <div className="absolute right-4 top-4 w-100 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="font-semibold text-gray-800">Parcel Information</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div className="p-4 space-y-3">
-        <div>
-          <div className="text-xs text-gray-500 uppercase">Address</div>
-          <div className="text-gray-900 font-medium">{address}</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 uppercase">Owner</div>
-          <div className="text-gray-900">{owner}</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 uppercase">Property Type</div>
-          <div className="text-gray-900">{propertyUse}</div>
-        </div>
-      </div>
-      <div className="border-t border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-800 mb-2">Reported Rent Data</h3>
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-2 py-1 text-left">Beds/Baths</th>
-              <th className="px-2 py-1 text-right">Rent</th>
-              <th className="px-2 py-1 text-right">Water</th>
-              <th className="px-2 py-1 text-right">Utils</th>
-              <th className="px-2 py-1 text-right">Total</th>
-              <th className="px-2 py-1 text-right">Reported</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockRentData.map((unit, idx) => (
-              <tr key={idx} className="border-b border-gray-100">
-                <td className="px-2 py-1">{unit.beds}bd/{unit.baths}ba</td>
-                <td className="px-2 py-1 text-right">${unit.rent}</td>
-                <td className="px-2 py-1 text-right">${unit.water}</td>
-                <td className="px-2 py-1 text-right">${unit.utilities}</td>
-                <td className="px-2 py-1 text-right font-medium">${unit.rent + unit.water + unit.utilities}</td>
-                <td className="px-2 py-1 text-right text-gray-500">{unit.date}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-semibold text-gray-800">Landlord</h3>
-          <button
-            onClick={() => {
-              const newState = !showLandlordDetails;
-              setShowLandlordDetails(newState);
-              onShowLandlordProperties?.(newState ? landlord.addresses : null);
-            }}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            {showLandlordDetails ? 'View Less' : 'View More'}
-          </button>
-        </div>
-        <div className="text-sm">
-          <div className="font-medium text-gray-800">{landlord.name}</div>
-          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-            <div>Properties: <span className="text-gray-800 font-medium">{landlord.properties}</span></div>
-            <div>Avg Rent: <span className="text-gray-800 font-medium">${landlord.avgRent}</span></div>
-            <div>Rating: <span className="text-gray-800 font-medium">{landlord.rating}/5</span></div>
-            <div>Units: <span className="text-gray-800 font-medium">{landlord.totalUnits}</span></div>
-          </div>
-        </div>
-        {showLandlordDetails && (
-          <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
-            <div className="grid grid-cols-2 gap-2">
-              <div>Code Violations: <span className="text-gray-800 font-medium">{landlord.violations}</span></div>
-              <div>Last Inspection: <span className="text-gray-800 font-medium">{landlord.lastInspection}</span></div>
-            </div>
-            <div className="mt-3">
-              <div className="font-medium text-gray-800 mb-1">Other Properties:</div>
-              <div className="max-h-24 overflow-y-auto space-y-1">
-                {landlord.addresses.map((addr, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => onSelectAddress?.(addr)}
-                    className="text-gray-600 truncate cursor-pointer hover:text-blue-600 hover:underline"
-                  >
-                    {addr}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+import { MADISON_CENTER, MAP_STYLE } from '@/components/mapConstants';
+import { fetchParcels } from '@/lib/fetchParcels';
+import {
+  parcelLayerStyle,
+  parcelHighlightStyle,
+  landlordHighlightStyle,
+  landlordHighlightFillStyle
+} from '@/components/mapLayers';
+import InfoPanel from '@/components/InfoPanel';
+import MapHeader from '@/components/MapHeader';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export default function ParcelMap() {
   const [parcelData, setParcelData] = useState(null);
@@ -201,8 +24,18 @@ export default function ParcelMap() {
   const [showLeaseForm, setShowLeaseForm] = useState(false);
   const [leaseFormData, setLeaseFormData] = useState({
     address: '',
+    bedrooms: '',
+    bathrooms: '',
+    rent: '',
+    waterBill: '',
+    electricityBill: '',
+    gasBill: '',
     rating: 5,
+    maintenanceTime: '',
+    maintenanceQuality: '',
+    comment: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -252,6 +85,44 @@ export default function ParcelMap() {
 
   const onMapLoad = () => {
     setMapLoaded(true);
+  };
+
+  const handleLeaseSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedParcel?.properties?.parcel_id) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parcelId: selectedParcel.properties.parcel_id,
+          ...leaseFormData
+        })
+      });
+
+      if (response.ok) {
+        setShowLeaseForm(false);
+        setLeaseFormData({
+          address: '',
+          bedrooms: '',
+          bathrooms: '',
+          rent: '',
+          waterBill: '',
+          electricityBill: '',
+          gasBill: '',
+          rating: 5,
+          maintenanceTime: '',
+          maintenanceQuality: '',
+          comment: '',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -313,190 +184,191 @@ export default function ParcelMap() {
         parcelData={parcelData}
       />
 
-      {!loading && !selectedParcel && (
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
-          Click on a parcel to view details
-        </div>
-      )}
+      <MapHeader
+        parcelData={parcelData}
+        onSearchAddress={flyToAddress}
+        onOpenLeaseForm={() => setShowLeaseForm(true)}
+      />
 
-      {/* The Floating Auth Panel */}
-      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 w-80">
-        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-          <h1 className="font-bold text-xl text-gray-800">LeaseLens</h1>
-        </div>
-        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-          <AddressAutocomplete
-            parcelData={parcelData}
-            onChange={(addr) => {
-              if (addr) flyToAddress(addr);
-            }}
-            placeholder="Search address..."
-          />
-        </div>
-        <Auth />
-        <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
-          <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
-          <button 
-            onClick={() => setShowLeaseForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
-          >
-            Add information about your lease
-          </button>
-        </div>
-
-        {showLeaseForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-gray-800">Submit Lease Information</h2>
-                <button 
-                  onClick={() => setShowLeaseForm(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              <form onSubmit={(e) => { e.preventDefault(); setShowLeaseForm(false); }}>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Your Address
-                    </label>
-                    <AddressAutocomplete
-                      parcelData={parcelData}
-                      onChange={(addr) => setLeaseFormData({ ...leaseFormData, address: addr })}
-                      placeholder="123 Main St, Madison, WI"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Number of Bedrooms
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
-                      <option value="">Select...</option>
-                      <option value="studio">Studio</option>
-                      <option value="1">1 Bedroom</option>
-                      <option value="2">2 Bedrooms</option>
-                      <option value="3">3 Bedrooms</option>
-                      <option value="4">4 Bedrooms</option>
-                      <option value="5">5+ Bedrooms</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Number of Bathrooms
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
-                      <option value="">Select...</option>
-                      <option value="1">1 Bathroom</option>
-                      <option value="2">2 Bathroom</option>
-                      <option value="3">3 Bathrooms</option>
-                      <option value="4">4 Bathrooms</option>
-                      <option value="5">5+ Bathrooms</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Monthly Rent
-                    </label>
+      {showLeaseForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-800">Submit Lease Information</h2>
+              <button
+                onClick={() => setShowLeaseForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleLeaseSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Your Address
+                  </label>
+                  <AddressAutocomplete
+                    parcelData={parcelData}
+                    onChange={(addr) => setLeaseFormData({ ...leaseFormData, address: addr })}
+                    placeholder="123 Main St, Madison, WI"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Number of Bedrooms
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.bedrooms}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, bedrooms: e.target.value })}
+                  >
+                    <option value="">Select...</option>
+                    <option value="studio">Studio</option>
+                    <option value="1">1 Bedroom</option>
+                    <option value="2">2 Bedrooms</option>
+                    <option value="3">3 Bedrooms</option>
+                    <option value="4">4 Bedrooms</option>
+                    <option value="5">5+ Bedrooms</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Number of Bathrooms
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.bathrooms}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, bathrooms: e.target.value })}
+                  >
+                    <option value="">Select...</option>
+                    <option value="1">1 Bathroom</option>
+                    <option value="2">2 Bathrooms</option>
+                    <option value="3">3 Bathrooms</option>
+                    <option value="4">4 Bathrooms</option>
+                    <option value="5">5+ Bathrooms</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monthly Rent
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.rent}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, rent: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Average Monthly Water Bill (Say 0 if included in rent cost)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="100"
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.waterBill}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, waterBill: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Average Monthly Electricity Bill (Say 0 if included in rent cost)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="150"
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.electricityBill}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, electricityBill: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Average Monthly Gas Bill (Say 0 if included in rent cost)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="60"
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.gasBill}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, gasBill: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rate Your Landlord (1-10)
+                  </label>
+                  <div className="flex items-center gap-3">
                     <input
-                      type="number"
-                      placeholder="1500"
-                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={leaseFormData.rating}
+                      onChange={(e) => setLeaseFormData({ ...leaseFormData, rating: Number(e.target.value) })}
+                      className="flex-1"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Average Monthly Water Bill (Say 0 if included in rent cost)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="100"
-                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Average Monthly Electricity Bill (Say 0 if included in rent cost)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="150"
-                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Average Monthly Gas Bill (Say 0 if included in rent cost)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="60"
-                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Rate Your Landlord (1-10)
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={leaseFormData.rating}
-                        onChange={(e) => setLeaseFormData({ ...leaseFormData, rating: Number(e.target.value) })}
-                        className="flex-1"
-                      />
-                      <span className="text-sm font-medium text-gray-700 w-8">{leaseFormData.rating}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      How long does it take for maintenance to come out after a request? 
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
-                      <option value="">Select...</option>
-                      <option value="1">Within a day</option>
-                      <option value="2">2 days</option>
-                      <option value="3">3 days</option>
-                      <option value="4">4 days</option>
-                      <option value="5">5+ days</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      What is the quality of the maintenance?
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500">
-                      <option value="">Select...</option>
-                      <option value="1">Terrible, didn't fix anything.</option>
-                      <option value="2">Okay, felt like a band-aid fix.</option>
-                      <option value="3">Good, I am happy with the service.</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Any Questions/Comments
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="What's on your mind about your rent?"
-                      className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
-                    />
+                    <span className="text-sm font-medium text-gray-700 w-8">{leaseFormData.rating}</span>
                   </div>
                 </div>
-                <button
-                  type="submit"
-                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors"
-                >
-                  Submit
-                </button>
-              </form>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    How long does it take for maintenance to come out after a request?
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.maintenanceTime}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, maintenanceTime: e.target.value })}
+                  >
+                    <option value="">Select...</option>
+                    <option value="1">Within a day</option>
+                    <option value="2">2 days</option>
+                    <option value="3">3 days</option>
+                    <option value="4">4 days</option>
+                    <option value="5">5+ days</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    What is the quality of the maintenance?
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.maintenanceQuality}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, maintenanceQuality: e.target.value })}
+                  >
+                    <option value="">Select...</option>
+                    <option value="1">Terrible, did not fix anything.</option>
+                    <option value="2">Okay, felt like a band-aid fix.</option>
+                    <option value="3">Good, I am happy with the service.</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Any Questions/Comments
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="What's on your mind about your rent?"
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                    value={leaseFormData.comment}
+                    onChange={(e) => setLeaseFormData({ ...leaseFormData, comment: e.target.value })}
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

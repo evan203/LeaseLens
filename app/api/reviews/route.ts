@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
+  addDoc,
   getDocs, 
   query, 
   where, 
@@ -41,8 +42,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST() {
-  return NextResponse.json({ 
-    error: 'Use client-side Firebase for adding reviews' 
-  }, { status: 501 });
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { 
+      parcelId, 
+      address, 
+      bedrooms, 
+      bathrooms, 
+      rent, 
+      waterBill, 
+      electricityBill, 
+      gasBill, 
+      rating, 
+      maintenanceTime, 
+      maintenanceQuality, 
+      comment 
+    } = body;
+
+    if (!parcelId || !address) {
+      return NextResponse.json({ error: 'parcelId and address required' }, { status: 400 });
+    }
+
+    const docRef = await addDoc(collection(db, 'reviews'), {
+      parcelId,
+      address,
+      bedrooms,
+      bathrooms,
+      rent,
+      waterBill,
+      electricityBill,
+      gasBill,
+      rating,
+      maintenanceTime,
+      maintenanceQuality,
+      comment,
+      createdAt: new Date()
+    });
+
+    return NextResponse.json({ id: docRef.id, message: 'Review submitted successfully' });
+  } catch (error) {
+    console.error('Error adding review:', error);
+    return NextResponse.json({ error: 'Failed to add review' }, { status: 500 });
+  }
 }
