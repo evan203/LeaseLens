@@ -8,6 +8,7 @@ import {
   orderBy,
   Timestamp 
 } from 'firebase/firestore';
+import { createOrUpdateLandlord } from './landlords';
 
 export interface Review {
   id?: string;
@@ -53,6 +54,9 @@ export async function addReview(
     comment,
     createdAt: Timestamp.now()
   });
+
+  await createOrUpdateLandlord(address, rating, extras?.maintenanceTime);
+
   return docRef.id;
 }
 
