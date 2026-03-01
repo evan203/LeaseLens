@@ -30,7 +30,7 @@ const parcelHighlightStyle = {
 };
 
 async function fetchParcels() {
-  const response = await fetch('/madison_parcels.json');
+  const response = await fetch('/residential.geojson');
   const data = await response.json();
   console.log('Loaded parcel data:', data);
   return data;

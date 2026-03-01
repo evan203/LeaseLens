@@ -4,7 +4,7 @@ const API_URL = 'https://maps.cityofmadison.com/arcgis/rest/services/Planning/Zo
 const OUT_FILE = './public/madison_parcels.json';
 
 const FIELDS = 'OwnerName1,OwnerName2,Address,PropertyUse,Zoning1';
-const BATCH_SIZE = 2000;
+const BATCH_SIZE = 1000;
 
 async function fetchParcels(offset = 0) {
   const url = `${API_URL}?where=1%3D1&outFields=${FIELDS}&returnGeometry=true&f=json&outSR=4326&resultRecordCount=${BATCH_SIZE}&resultOffset=${offset}`;

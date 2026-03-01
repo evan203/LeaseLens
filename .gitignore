@@ -41,3 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 tax_parcels_full.geojson
+public/madison_parcels.json
