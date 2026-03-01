@@ -2,32 +2,64 @@
 
 import React, { useState, useEffect } from 'react';
 
-const mockRentData = [
-  { beds: 2, baths: 1, rent: 1200, water: 50, utilities: 100, date: '2024-01-15' },
-  { beds: 3, baths: 2, rent: 1600, water: 75, utilities: 150, date: '2024-02-20' },
-];
-
 export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress, parcelData, showLandlordListOnly }) {
   const [activeTab, setActiveTab] = useState('parcel');
   const [selectedLandlord, setSelectedLandlord] = useState(null);
+  const [landlordData, setLandlordData] = useState(null);
+  const [loadingLandlordData, setLoadingLandlordData] = useState(false);
 
   useEffect(() => {
     if (!showLandlordListOnly) {
       onShowLandlordProperties?.(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('parcel');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLandlord(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLandlordData(null);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('landlords');
     }
-  }, [parcel, showLandlordListOnly]);
+  }, [parcel, showLandlordListOnly, onShowLandlordProperties]);
 
   const currentTab = showLandlordListOnly ? 'landlords' : activeTab;
-
-  if (!parcel && !showLandlordListOnly) return null;
-
   const address = parcel?.properties.Address || 'N/A';
   const owner = parcel?.properties.ManagementGroup || 'N/A';
   const propertyUse = parcel?.properties.PropertyUse || 'N/A';
+
+  useEffect(() => {
+    const fetchLandlordData = (landlordName) => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoadingLandlordData(true);
+      fetch(`/api/landlords?landlordName=${encodeURIComponent(landlordName)}`)
+        .then(res => res.json())
+        .then(data => {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setLandlordData(data);
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setLoadingLandlordData(false);
+        })
+        .catch(err => {
+          console.error('Error fetching landlord data:', err);
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setLandlordData(null);
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setLoadingLandlordData(false);
+        });
+    };
+
+    if (selectedLandlord) {
+      fetchLandlordData(selectedLandlord);
+    } else if (owner && owner !== 'N/A' && !showLandlordListOnly) {
+      fetchLandlordData(owner);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLandlordData(null);
+    }
+  }, [selectedLandlord, owner, showLandlordListOnly]);
+
+  if (!parcel && !showLandlordListOnly) return null;
 
   const landlordProperties = parcelData?.features
     .filter(f => f.properties.ManagementGroup === owner)
@@ -36,12 +68,13 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
   const currentLandlord = {
     name: owner,
     properties: landlordProperties.length,
-    avgRent: 1450,
-    rating: 4.2,
-    totalUnits: 24,
-    violations: 2,
-    lastInspection: '2024-01-10',
+    avgRent: landlordData?.avgRent || 'NA',
+    rating: landlordData?.avgRating || 'NA',
+    totalUnits: landlordData?.totalUnits || 'NA',
+    violations: landlordData?.violations || 'NA',
+    lastInspection: landlordData?.lastInspection || 'NA',
     addresses: landlordProperties,
+    rentData: landlordData?.rentData || 'NA',
   };
 
   const landlordMap = new Map();
@@ -75,15 +108,31 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
     const addresses = parcelData?.features
       .filter(f => f.properties.ManagementGroup === landlordName)
       .map(f => f.properties.Address) || [];
+    
+    if (selectedLandlord === landlordName && landlordData) {
+      return {
+        name: landlordName,
+        properties: addresses.length,
+        avgRent: landlordData.avgRent,
+        rating: landlordData.avgRating,
+        totalUnits: landlordData.totalUnits,
+        violations: landlordData.violations,
+        lastInspection: landlordData.lastInspection,
+        addresses,
+        rentData: landlordData.rentData,
+      };
+    }
+    
     return {
       name: landlordName,
       properties: addresses.length,
-      avgRent: 1450,
-      rating: 4.2,
-      totalUnits: 24,
-      violations: 2,
-      lastInspection: '2024-01-10',
+      avgRent: 'NA',
+      rating: 'NA',
+      totalUnits: 'NA',
+      violations: 'NA',
+      lastInspection: 'NA',
       addresses,
+      rentData: 'NA',
     };
   };
 
@@ -110,22 +159,30 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
     </div>
   );
 
+  const formatValue = (value, prefix = '') => {
+    if (value === 'NA' || value === null || value === undefined) return 'NA';
+    return `${prefix}${value}`;
+  };
+
   const renderLandlordsTab = () => {
     if (showLandlordListOnly) {
       if (selectedLandlord) {
         const landlord = getLandlordInfo(selectedLandlord);
         return (
           <div className="p-4 space-y-4">
+            {loadingLandlordData && (
+              <div className="text-sm text-gray-500 text-center py-2">Loading landlord data...</div>
+            )}
             <div>
               <div className="text-xs text-gray-500 uppercase">Current Landlord</div>
               <div className="font-medium text-gray-800">{landlord.name}</div>
               <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
                 <div>Properties: <span className="text-gray-800 font-medium">{landlord.properties}</span></div>
-                <div>Avg Rent: <span className="text-gray-800 font-medium">${landlord.avgRent}</span></div>
-                <div>Rating: <span className="text-gray-800 font-medium">{landlord.rating}/5</span></div>
-                <div>Units: <span className="text-gray-800 font-medium">{landlord.totalUnits}</span></div>
-                <div>Code Violations: <span className="text-gray-800 font-medium">{landlord.violations}</span></div>
-                <div>Last Inspection: <span className="text-gray-800 font-medium">{landlord.lastInspection}</span></div>
+                <div>Avg Rent: <span className="text-gray-800 font-medium">{formatValue(landlord.avgRent, '$')}</span></div>
+                <div>Rating: <span className="text-gray-800 font-medium">{formatValue(landlord.rating)}/5</span></div>
+                <div>Units: <span className="text-gray-800 font-medium">{formatValue(landlord.totalUnits)}</span></div>
+                <div>Code Violations: <span className="text-gray-800 font-medium">{formatValue(landlord.violations)}</span></div>
+                <div>Last Inspection: <span className="text-gray-800 font-medium">{formatValue(landlord.lastInspection)}</span></div>
               </div>
             </div>
             <div>
@@ -189,16 +246,19 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
 
     return (
       <div className="p-4 space-y-4">
+        {loadingLandlordData && (
+          <div className="text-sm text-gray-500 text-center py-2">Loading landlord data...</div>
+        )}
         <div>
           <div className="text-xs text-gray-500 uppercase">Current Landlord</div>
           <div className="font-medium text-gray-800">{currentLandlord.name}</div>
           <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
             <div>Properties: <span className="text-gray-800 font-medium">{currentLandlord.properties}</span></div>
-            <div>Avg Rent: <span className="text-gray-800 font-medium">${currentLandlord.avgRent}</span></div>
-            <div>Rating: <span className="text-gray-800 font-medium">{currentLandlord.rating}/5</span></div>
-            <div>Units: <span className="text-gray-800 font-medium">{currentLandlord.totalUnits}</span></div>
-            <div>Code Violations: <span className="text-gray-800 font-medium">{currentLandlord.violations}</span></div>
-            <div>Last Inspection: <span className="text-gray-800 font-medium">{currentLandlord.lastInspection}</span></div>
+            <div>Avg Rent: <span className="text-gray-800 font-medium">{formatValue(currentLandlord.avgRent, '$')}</span></div>
+            <div>Rating: <span className="text-gray-800 font-medium">{formatValue(currentLandlord.rating)}/5</span></div>
+            <div>Units: <span className="text-gray-800 font-medium">{formatValue(currentLandlord.totalUnits)}</span></div>
+            <div>Code Violations: <span className="text-gray-800 font-medium">{formatValue(currentLandlord.violations)}</span></div>
+            <div>Last Inspection: <span className="text-gray-800 font-medium">{formatValue(currentLandlord.lastInspection)}</span></div>
           </div>
         </div>
         <div>
