@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+<<<<<<< HEAD
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
@@ -191,6 +192,18 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress,
     </div>
   );
 }
+=======
+import { MADISON_CENTER, MAP_STYLE } from '@/components/mapConstants';
+import { fetchParcels } from '@/lib/fetchParcels';
+import {
+  parcelLayerStyle,
+  parcelHighlightStyle,
+  landlordHighlightStyle,
+  landlordHighlightFillStyle
+} from '@/components/mapLayers';
+import InfoPanel from '@/components/InfoPanel';
+import MapHeader from '@/components/MapHeader';
+>>>>>>> origin/main
 
 export default function ParcelMap() {
   const [parcelData, setParcelData] = useState(null);
@@ -204,6 +217,10 @@ export default function ParcelMap() {
     rating: 5,
   });
   const mapRef = useRef(null);
+
+  useEffect(() => {
+    setHighlightedAddresses(null);
+  }, [selectedParcel]);
 
   useEffect(() => {
     fetchParcels()
@@ -255,7 +272,7 @@ export default function ParcelMap() {
       <Map
         ref={mapRef}
         initialViewState={MADISON_CENTER}
-        mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        mapStyle={MAP_STYLE}
         onClick={handleMapClick}
         onLoad={onMapLoad}
       >
@@ -271,7 +288,7 @@ export default function ParcelMap() {
               />
             )}
             {highlightedAddresses && (
-              <React.Fragment key={highlightedAddresses.join('-')}>
+              <div>
                 <Layer
                   {...landlordHighlightFillStyle}
                   filter={['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]}
@@ -286,7 +303,7 @@ export default function ParcelMap() {
                     : ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]
                   }
                 />
-              </React.Fragment>
+              </div>
             )}
           </Source>
         )}
@@ -298,7 +315,16 @@ export default function ParcelMap() {
         </div>
       )}
 
-      <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} onShowLandlordProperties={setHighlightedAddresses} onSelectAddress={flyToAddress} parcelData={parcelData} />
+      <InfoPanel
+        parcel={selectedParcel}
+        onClose={() => {
+          setSelectedParcel(null);
+          setHighlightedAddresses(null);
+        }}
+        onShowLandlordProperties={setHighlightedAddresses}
+        onSelectAddress={flyToAddress}
+        parcelData={parcelData}
+      />
 
       {!loading && !selectedParcel && (
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
@@ -306,6 +332,7 @@ export default function ParcelMap() {
         </div>
       )}
 
+<<<<<<< HEAD
       {/* The Floating Auth Panel */}
       <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 w-80">
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
@@ -484,6 +511,9 @@ export default function ParcelMap() {
           </div>
         )}
       </div>
+=======
+      <MapHeader />
+>>>>>>> origin/main
     </div>
   );
 }
