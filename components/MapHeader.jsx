@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import Auth from './Auth';
 import AddressAutocomplete from './AddressAutocomplete';
 
@@ -20,7 +19,7 @@ export default function MapHeader({ parcelData, onSearchAddress, onOpenLeaseForm
       <Auth />
       <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
         <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
-        <button 
+        <button
           onClick={onOpenLeaseForm}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
         >
