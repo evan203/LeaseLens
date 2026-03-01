@@ -1,12 +1,12 @@
 import { db } from './firebase';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
   updateDoc,
-  Timestamp 
+  Timestamp
 } from 'firebase/firestore';
 import { fetchParcels } from './fetchParcels';
 
@@ -75,25 +75,25 @@ export async function createOrUpdateLandlord(
   maintenanceTime?: string
 ): Promise<string> {
   const parcel = await findParcelByAddress(parcelAddress);
-  
+
   if (!parcel) {
     console.warn('Parcel not found for address:', parcelAddress);
     return '';
   }
 
   const { ManagementGroup, OwnerName1, OwnerAddress, OwnerCityStZip } = parcel.properties;
-  
+
   const landlordId = getLandlordId(ManagementGroup, OwnerName1);
   const landlordName = getLandlordName(ManagementGroup, OwnerName1);
-  const mailingAddress = OwnerAddress && OwnerCityStZip 
-    ? `${OwnerAddress}, ${OwnerCityStZip}` 
+  const mailingAddress = OwnerAddress && OwnerCityStZip
+    ? `${OwnerAddress}, ${OwnerCityStZip}`
     : '';
 
   const landlordRef = doc(db, 'landlords', landlordId);
   const existingDoc = await getDoc(landlordRef);
 
-  const maintenanceTimeNumeric = maintenanceTime 
-    ? (MAINTENANCE_TIME_MAP[maintenanceTime] || 0) 
+  const maintenanceTimeNumeric = maintenanceTime
+    ? (MAINTENANCE_TIME_MAP[maintenanceTime] || 0)
     : 0;
 
   if (existingDoc.exists()) {
@@ -101,7 +101,7 @@ export async function createOrUpdateLandlord(
     const currentCount = existingData.reviewCount || 0;
     const currentRatingSum = (existingData.averageRating || 0) * currentCount;
     const currentMaintenanceSum = (existingData.averageMaintenanceTime || 0) * currentCount;
-    
+
     const newCount = currentCount + 1;
     const newRatingSum = currentRatingSum + rating;
     const newMaintenanceSum = currentMaintenanceSum + maintenanceTimeNumeric;
@@ -141,11 +141,11 @@ export async function getLandlords(): Promise<Landlord[]> {
 export async function getLandlordById(id: string): Promise<Landlord | null> {
   const docRef = doc(db, 'landlords', id);
   const snapshot = await getDoc(docRef);
-  
+
   if (!snapshot.exists()) {
     return null;
   }
-  
+
   return {
     id: snapshot.id,
     ...snapshot.data(),

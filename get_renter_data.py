@@ -123,15 +123,15 @@ def process_data(gdf):
         for owner in row['owner_set']:
             owner_unit_counts[owner] = owner_unit_counts.get(owner, 0) + 1
 
-    # 5. For each unique Address, pick the owner with the most total units
+    # 5. For each unique Address, pick the owner with the most units at that address
     def pick_best_owner(group):
-        owner_scores = {}
+        owner_counts = {}
         for idx, row in group.iterrows():
             for owner in row['owner_set']:
-                owner_scores[owner] = owner_unit_counts.get(owner, 0)
-        if not owner_scores:
+                owner_counts[owner] = owner_counts.get(owner, 0) + 1
+        if not owner_counts:
             return "UNKNOWN"
-        return max(owner_scores, key=owner_scores.get)
+        return max(owner_counts, key=owner_counts.get)
 
     best_owner_per_address = rentals.groupby('Address').apply(pick_best_owner, include_groups=False).to_dict()
     rentals['ManagementGroup'] = rentals['Address'].map(best_owner_per_address)
