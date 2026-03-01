@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import TenantAuth from '@/components/TenantAuth';
 
 const MADISON_CENTER = {
   latitude: 43.0731,
@@ -38,7 +39,7 @@ async function fetchParcels() {
 
 function InfoPanel({ parcel, onClose }) {
   if (!parcel) return null;
-  
+
   const address = parcel.properties.Address || 'N/A';
   const owner = [parcel.properties.OwnerName1, parcel.properties.OwnerName2].filter(Boolean).join(' ') || 'N/A';
   const propertyUse = parcel.properties.PropertyUse || 'N/A';
@@ -101,11 +102,11 @@ export default function ParcelMap() {
 
   const handleMapClick = (event) => {
     if (!mapRef.current || !parcelData) return;
-    
+
     const features = mapRef.current.queryRenderedFeatures(event.point, {
       layers: ['parcel-layer']
     });
-    
+
     if (features.length > 0) {
       setSelectedParcel(features[0]);
     } else {
@@ -127,12 +128,12 @@ export default function ParcelMap() {
         onLoad={onMapLoad}
       >
         <NavigationControl position="top-right" />
-        
+
         {mapLoaded && parcelData && (
           <Source id="parcels" type="geojson" data={parcelData}>
             <Layer {...parcelLayerStyle} />
             {selectedParcel && (
-              <Layer 
+              <Layer
                 {...parcelHighlightStyle}
                 filter={['==', 'OBJECTID', selectedParcel.properties.OBJECTID]}
               />
@@ -140,18 +141,21 @@ export default function ParcelMap() {
           </Source>
         )}
       </Map>
-      
+
       {loading && (
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
           <div className="text-gray-600">Loading parcels...</div>
         </div>
       )}
-      
+
       <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} />
-      
+
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
         Click on a parcel to view details
       </div>
+
+      {/* The Floating Auth Panel */}
+      <TenantAuth />
     </div>
   );
 }
