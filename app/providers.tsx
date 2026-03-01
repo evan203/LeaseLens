@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
         // Restrict login methods to Email/SMS for easy tenant onboarding
         // or allow Metamask for "power users"
-        loginMethods: ['email', 'sms', 'wallet'],
+        loginMethods: ['email', 'sms'],
       }}
     >
       {children}
