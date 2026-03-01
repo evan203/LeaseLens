@@ -44,10 +44,22 @@ function InfoPanel({ parcel, onClose }) {
   const owner = [parcel.properties.OwnerName1, parcel.properties.OwnerName2].filter(Boolean).join(' ') || 'N/A';
   const propertyUse = parcel.properties.PropertyUse || 'N/A';
 
+  const [showLandlordDetails, setShowLandlordDetails] = useState(false);
+
   const mockRentData = [
     { beds: 2, baths: 1, rent: 1200, water: 50, utilities: 100, date: '2024-01-15' },
     { beds: 3, baths: 2, rent: 1600, water: 75, utilities: 150, date: '2024-02-20' },
   ];
+
+  const mockLandlord = {
+    name: 'Madison Property Mgmt LLC',
+    properties: 12,
+    avgRent: 1450,
+    rating: 4.2,
+    totalUnits: 24,
+    violations: 2,
+    lastInspection: '2024-01-10',
+  };
 
   return (
     <div className="absolute right-4 top-4 w-100 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
@@ -99,6 +111,35 @@ function InfoPanel({ parcel, onClose }) {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="border-t border-gray-200 p-4">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-semibold text-gray-800">Landlord</h3>
+          <button 
+            onClick={() => setShowLandlordDetails(!showLandlordDetails)}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            {showLandlordDetails ? 'View Less' : 'View More'}
+          </button>
+        </div>
+        <div className="text-sm">
+          <div className="font-medium text-gray-800">{mockLandlord.name}</div>
+          <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+            <div>Properties: <span className="text-gray-800 font-medium">{mockLandlord.properties}</span></div>
+            <div>Avg Rent: <span className="text-gray-800 font-medium">${mockLandlord.avgRent}</span></div>
+            <div>Rating: <span className="text-gray-800 font-medium">{mockLandlord.rating}/5</span></div>
+            <div>Units: <span className="text-gray-800 font-medium">{mockLandlord.totalUnits}</span></div>
+          </div>
+        </div>
+        {showLandlordDetails && (
+          <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
+            <div className="grid grid-cols-2 gap-2">
+              <div>Code Violations: <span className="text-gray-800 font-medium">{mockLandlord.violations}</span></div>
+              <div>Last Inspection: <span className="text-gray-800 font-medium">{mockLandlord.lastInspection}</span></div>
+            </div>
+            <div className="mt-2 text-gray-500">Additional landlord details would appear here...</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -187,6 +228,13 @@ export default function ParcelMap() {
       <div className="absolute top-4 left-4 z-50 flex flex-col gap-2">
         <div className="bg-white px-4 py-2 rounded-lg shadow-xl border border-gray-200">
           <h1 className="font-bold text-xl text-gray-1200">LeaseLens</h1>
+        </div>
+        <div className="bg-white px-4 py-2 rounded-lg shadow-xl border border-gray-200">
+          <input 
+            type="text" 
+            placeholder="Search address..." 
+            className="w-full text-sm px-2 py-1 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+          />
         </div>
         <TenantAuth />
       </div>
