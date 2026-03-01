@@ -50,7 +50,7 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
   if (!parcel) return null;
 
   const address = parcel.properties.Address || 'N/A';
-  const owner = [parcel.properties.OwnerName1, parcel.properties.OwnerName2].filter(Boolean).join(' ') || 'N/A';
+  const owner = parcel.properties.ManagementGroup || 'N/A';
   const propertyUse = parcel.properties.PropertyUse || 'N/A';
 
   const [showLandlordDetails, setShowLandlordDetails] = useState(false);
