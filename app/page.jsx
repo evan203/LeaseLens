@@ -14,8 +14,12 @@ import {
 import InfoPanel from '@/components/InfoPanel';
 import MapHeader from '@/components/MapHeader';
 import LeaseForm from '@/components/LeaseForm';
+import { addReview } from '@/lib/reviews';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ParcelMap() {
+  const { user } = useAuth();
   const [parcelData, setParcelData] = useState(null);
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [loading, setLoading] = useState(true);
