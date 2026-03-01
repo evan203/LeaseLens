@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import TenantAuth from './TenantAuth';
 
 const MADISON_CENTER = {
   latitude: 43.0731,
@@ -153,9 +152,6 @@ export default function ParcelMap() {
       <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
         Click on a parcel to view details
       </div>
-
-      {/* The Floating Auth Panel */}
-      <TenantAuth />
     </div>
   );
 }
