@@ -24,9 +24,9 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
   }, [parcel, showLandlordListOnly, onShowLandlordProperties]);
 
   const currentTab = showLandlordListOnly ? 'landlords' : activeTab;
-  const address = parcel?.properties.Address || 'N/A';
-  const owner = parcel?.properties.ManagementGroup || 'N/A';
-  const propertyUse = parcel?.properties.PropertyUse || 'N/A';
+  const address = parcel?.properties?.Address || 'N/A';
+  const owner = parcel?.properties?.ManagementGroup || 'N/A';
+  const propertyUse = parcel?.properties?.PropertyUse || 'N/A';
 
   useEffect(() => {
     const fetchLandlordData = (landlordName) => {
@@ -60,26 +60,27 @@ export default function InfoPanel({ parcel, onClose, onShowLandlordProperties, o
   }, [selectedLandlord, owner, showLandlordListOnly]);
 
   if (!parcel && !showLandlordListOnly) return null;
-  const distMilesGrocery = parcel.properties.dist_miles_grocery;
-  const walkTimeMinsGrocery = parcel.properties.walk_time_mins_grocery;
-  const nearestGrocery = parcel.properties.nearest_grocery;
+
+  const distMilesGrocery = parcel?.properties?.dist_miles_grocery;
+  const walkTimeMinsGrocery = parcel?.properties?.walk_time_mins_grocery;
+  const nearestGrocery = parcel?.properties?.nearest_grocery;
   const hasGroceryData = distMilesGrocery !== undefined || walkTimeMinsGrocery !== undefined;
 
-  const distMilesPharmacy = parcel.properties.dist_miles_pharmacy;
-  const walkTimeMinsPharmacy = parcel.properties.walk_time_mins_pharmacy;
-  const nearestPharmacy = parcel.properties.nearest_pharmacy;
+  const distMilesPharmacy = parcel?.properties?.dist_miles_pharmacy;
+  const walkTimeMinsPharmacy = parcel?.properties?.walk_time_mins_pharmacy;
+  const nearestPharmacy = parcel?.properties?.nearest_pharmacy;
   const hasPharmacyData = distMilesPharmacy !== undefined || walkTimeMinsPharmacy !== undefined;
 
-  const distMilesGym = parcel.properties.dist_miles_gym;
-  const walkTimeMinsGym = parcel.properties.walk_time_mins_gym;
-  const nearestGym = parcel.properties.nearest_gym;
+  const distMilesGym = parcel?.properties?.dist_miles_gym;
+  const walkTimeMinsGym = parcel?.properties?.walk_time_mins_gym;
+  const nearestGym = parcel?.properties?.nearest_gym;
   const hasGymData = distMilesGym !== undefined || walkTimeMinsGym !== undefined;
 
-  const distMilesCampus = parcel.properties.dist_miles_campus;
-  const walkTimeMinsCampus = parcel.properties.walk_time_mins_campus;
+  const distMilesCampus = parcel?.properties?.dist_miles_campus;
+  const walkTimeMinsCampus = parcel?.properties?.walk_time_mins_campus;
   const hasCampusData = distMilesCampus !== undefined || walkTimeMinsCampus !== undefined;
 
-  console.log('Parcel props:', parcel.properties);
+  console.log('Parcel props:', parcel?.properties);
   console.log('Grocery data:', { distMilesGrocery, walkTimeMinsGrocery, nearestGrocery, hasGroceryData });
 
   const landlordProperties = parcelData?.features
