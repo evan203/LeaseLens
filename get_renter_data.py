@@ -107,14 +107,38 @@ def process_data(gdf):
     # 3. "Pretty" Property Names
     rentals['PropertyUse'] = rentals['PropertyUse'].map(PROPERTY_USE_MAP).fillna(rentals['PropertyUse'])
 
-    # 4. Consensus Ownership (Who owns the most units at this billing address?)
-    def find_consensus(group):
-        names = pd.concat([group['OwnerName1'], group['OwnerName2']])
-        names = names[names != '']
-        return names.value_counts().idxmax() if not names.empty else "UNKNOWN"
+    # 4. Count total units per owner (for deciding which owner wins for duplicate addresses)
+    def get_all_owners(row):
+        owners = set()
+        if row['OwnerName1']:
+            owners.add(row['OwnerName1'])
+        if row['OwnerName2']:
+            owners.add(row['OwnerName2'])
+        return owners
 
-    address_map = rentals.groupby('OwnerAddress').apply(find_consensus, include_groups=False).to_dict()
-    rentals['ManagementGroup'] = rentals['OwnerAddress'].map(address_map)
+    rentals['owner_set'] = rentals.apply(get_all_owners, axis=1)
+    
+    owner_unit_counts = {}
+    for idx, row in rentals.iterrows():
+        for owner in row['owner_set']:
+            owner_unit_counts[owner] = owner_unit_counts.get(owner, 0) + 1
+
+    # 5. For each unique Address, pick the owner with the most total units
+    def pick_best_owner(group):
+        owner_scores = {}
+        for idx, row in group.iterrows():
+            for owner in row['owner_set']:
+                owner_scores[owner] = owner_unit_counts.get(owner, 0)
+        if not owner_scores:
+            return "UNKNOWN"
+        return max(owner_scores, key=owner_scores.get)
+
+    best_owner_per_address = rentals.groupby('Address').apply(pick_best_owner, include_groups=False).to_dict()
+    rentals['ManagementGroup'] = rentals['Address'].map(best_owner_per_address)
+
+    # 6. Drop duplicate addresses, keeping the first occurrence (now owned by best owner)
+    rentals = rentals.drop_duplicates(subset=['Address'], keep='first')
+    rentals = rentals.drop(columns=['owner_set'])
     
     return rentals
 
