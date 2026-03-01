@@ -8,7 +8,7 @@ import TenantAuth from './TenantAuth';
 const MADISON_CENTER = {
   latitude: 43.0731,
   longitude: -89.3841,
-  zoom: 12
+  zoom: 13
 };
 
 const parcelLayerStyle = {
@@ -31,7 +31,7 @@ const parcelHighlightStyle = {
 };
 
 async function fetchParcels() {
-  const response = await fetch('/residential.geojson');
+  const response = await fetch('/renters.geojson');
   const data = await response.json();
   console.log('Loaded parcel data:', data);
   return data;
@@ -43,10 +43,14 @@ function InfoPanel({ parcel, onClose }) {
   const address = parcel.properties.Address || 'N/A';
   const owner = [parcel.properties.OwnerName1, parcel.properties.OwnerName2].filter(Boolean).join(' ') || 'N/A';
   const propertyUse = parcel.properties.PropertyUse || 'N/A';
-  const zoning = parcel.properties.Zoning1 || 'N/A';
+
+  const mockRentData = [
+    { beds: 2, baths: 1, rent: 1200, water: 50, utilities: 100, date: '2024-01-15' },
+    { beds: 3, baths: 2, rent: 1600, water: 75, utilities: 150, date: '2024-02-20' },
+  ];
 
   return (
-    <div className="absolute left-4 top-4 w-80 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+    <div className="absolute right-4 top-4 w-100 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden max-h-[80vh] overflow-y-auto">
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <h2 className="font-semibold text-gray-800">Parcel Information</h2>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -68,10 +72,33 @@ function InfoPanel({ parcel, onClose }) {
           <div className="text-xs text-gray-500 uppercase">Property Type</div>
           <div className="text-gray-900">{propertyUse}</div>
         </div>
-        <div>
-          <div className="text-xs text-gray-500 uppercase">Zoning</div>
-          <div className="text-gray-900">{zoning}</div>
-        </div>
+      </div>
+      <div className="border-t border-gray-200 p-4">
+        <h3 className="font-semibold text-gray-800 mb-2">Reported Rent Data</h3>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-2 py-1 text-left">Beds/Baths</th>
+              <th className="px-2 py-1 text-right">Rent</th>
+              <th className="px-2 py-1 text-right">Water</th>
+              <th className="px-2 py-1 text-right">Utils</th>
+              <th className="px-2 py-1 text-right">Total</th>
+              <th className="px-2 py-1 text-right">Reported</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockRentData.map((unit, idx) => (
+              <tr key={idx} className="border-b border-gray-100">
+                <td className="px-2 py-1">{unit.beds}bd/{unit.baths}ba</td>
+                <td className="px-2 py-1 text-right">${unit.rent}</td>
+                <td className="px-2 py-1 text-right">${unit.water}</td>
+                <td className="px-2 py-1 text-right">${unit.utilities}</td>
+                <td className="px-2 py-1 text-right font-medium">${unit.rent + unit.water + unit.utilities}</td>
+                <td className="px-2 py-1 text-right text-gray-500">{unit.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -127,7 +154,7 @@ export default function ParcelMap() {
         onClick={handleMapClick}
         onLoad={onMapLoad}
       >
-        <NavigationControl position="top-right" />
+        <NavigationControl position="bottom-left" />
 
         {mapLoaded && parcelData && (
           <Source id="parcels" type="geojson" data={parcelData}>
@@ -135,7 +162,7 @@ export default function ParcelMap() {
             {selectedParcel && (
               <Layer
                 {...parcelHighlightStyle}
-                filter={['==', 'OBJECTID', selectedParcel.properties.OBJECTID]}
+                filter={['==', 'Address', selectedParcel.properties.Address]}
               />
             )}
           </Source>
@@ -150,12 +177,19 @@ export default function ParcelMap() {
 
       <InfoPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} />
 
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
-        Click on a parcel to view details
-      </div>
+      {!loading && !selectedParcel && (
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg text-sm text-gray-600">
+          Click on a parcel to view details
+        </div>
+      )}
 
       {/* The Floating Auth Panel */}
-      <TenantAuth />
+      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2">
+        <div className="bg-white px-4 py-2 rounded-lg shadow-xl border border-gray-200">
+          <h1 className="font-bold text-xl text-gray-1200">LeaseLens</h1>
+        </div>
+        <TenantAuth />
+      </div>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default function TenantAuth() {
   }
 
   return (
-    <div className="fixed top-4 left-4 z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200">
+    <div className="z-50 bg-white p-4 rounded-lg shadow-xl border border-gray-200">
       {!authenticated ? (
         <div className="flex flex-col gap-2">
           <h3 className="font-bold text-gray-800">Tenant Access</h3>
