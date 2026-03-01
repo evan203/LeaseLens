@@ -61,7 +61,6 @@ async function fetchParcels() {
   console.log('Loaded parcel data:', data);
   return data;
 }
-
 function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress, parcelData }) {
   if (!parcel) return null;
 
@@ -176,7 +175,7 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress,
               <div className="max-h-24 overflow-y-auto space-y-1">
                 {landlord.addresses.map((addr, idx) => (
                   <div 
-                    key={idx} 
+                    key={idx}
                     onClick={() => onSelectAddress?.(addr)}
                     className="text-gray-600 truncate cursor-pointer hover:text-blue-600 hover:underline"
                   >
@@ -273,11 +272,11 @@ export default function ParcelMap() {
                 />
                 <Layer
                   {...landlordHighlightStyle}
-                  filter={selectedParcel 
-                    ? ['all', 
-                        ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])],
-                        ['!=', 'Address', selectedParcel.properties.Address]
-                      ]
+                  filter={selectedParcel
+                    ? ['all',
+                      ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])],
+                      ['!=', 'Address', selectedParcel.properties.Address]
+                    ]
                     : ['any', ...highlightedAddresses.map(addr => ['==', 'Address', addr])]
                   }
                 />
