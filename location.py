@@ -1,120 +1,132 @@
 import osmnx as ox
 import geopandas as gpd
-from shapely.geometry import Point
-from geopy.distance import geodesic
+import pandas as pd
 import warnings
 
-# Suppress warnings about calculating centroids on unprojected geographic coordinates
 warnings.filterwarnings("ignore", category=UserWarning)
 
-def get_closest_amenities_and_campus_distance(lat, lon):
+def enrich_apartments_with_amenities(input_geojson_path, output_geojson_path):
     """
-    Takes a latitude and longitude and returns the nearest supermarket, 
-    pharmacy, gym, and the distance/walk time to the UW Madison campus border.
+    Takes a GeoJSON of apartments, fetches Madison amenity data ONCE, 
+    calculates all distances in memory, and saves an enriched GeoJSON.
     """
+    print("1. Loading Apartments GeoJSON...")
+    apartments = gpd.read_file(input_geojson_path)
     
-    # 1. Define the tags we are looking for
+    # 2. Define our target tags
     amenity_tags = {
         'shop': ['supermarket', 'grocery'],
         'amenity': ['pharmacy'],
-        'leisure': ['fitness_centre', 'sports_centre']
+        'leisure': ['fitness_centre', 'sports_centre', 'sports_hall'],
+        'sport': ['fitness', 'multi'],
+        'building': ['sports_centre', 'sports_hall', 'gymnasium'],
+        'name': [
+            'Nicholas Recreation Center', 
+            'Bakke Recreation & Wellbeing Center', 
+            'Bakke Recreation Center'
+        ]
     }
 
-    print("Fetching POI data from OpenStreetMap...")
-    # Get features within a 5km (5000m) radius
-    try:
-        gdf_pois = ox.features_from_point((lat, lon), dist=5000, tags=amenity_tags)
-    except Exception as e:
-        print(f"Error fetching POIs: {e}")
+    print("2. Fetching all Madison POIs (Just once!)...")
+    # Instead of a 5km radius from a point, we fetch a 15km radius from the center of Madison 
+    # to ensure we capture amenities for apartments in suburbs like Middleton or Fitchburg.
+    madison_center = (43.075153, -89.395803) 
+    pois = ox.features_from_point(madison_center, dist=15000, tags=amenity_tags)
+    
+    # Convert polygon buildings to point centroids so distances are measured to the center
+    pois['geometry'] = pois['geometry'].centroid
+
+    print("3. Fetching UW Madison Campus Boundary...")
+    campus = ox.geocode_to_gdf("R7144092", by_osmid=True)
+
+    print("4. Projecting all data to meters for accurate distance math...")
+    # EPSG:4326 is standard GPS (degrees). We project the campus first, 
+    # then force everything else into that exact same local projection (meters).
+    campus_proj = ox.projection.project_gdf(campus)
+    target_crs = campus_proj.crs
+    
+    pois_proj = pois.to_crs(target_crs)
+    apartments_proj = apartments.to_crs(target_crs)
+
+    # 5. Split POIs into categories
+    def categorize_poi(row):
+        if pd.notna(row.get('shop')) and row['shop'] in ['supermarket', 'grocery']:
+            return 'supermarket'
+        elif pd.notna(row.get('amenity')) and row['amenity'] == 'pharmacy':
+            return 'pharmacy'
+        elif row.get('name') != "Unknown": # Expanded net for Gyms/Rec Centers
+            return 'gym'
         return None
 
-    # Initialize lists to categorize our findings
-    supermarkets = []
-    pharmacies = []
-    gyms = []
-    origin = (lat, lon)
+    pois_proj['category'] = pois_proj.apply(categorize_poi, axis=1)
+    
+    # Create separate GeoDataFrames
+    supermarkets = pois_proj[pois_proj['category'] == 'supermarket'][['name', 'geometry']]
+    pharmacies = pois_proj[pois_proj['category'] == 'pharmacy'][['name', 'geometry']]
+    gyms = pois_proj[pois_proj['category'] == 'gym'][['name', 'geometry']]
 
-    # 2. Process the POIs
-    if not gdf_pois.empty:
-        for idx, row in gdf_pois.iterrows():
-            geom = row['geometry']
-            centroid = geom.centroid
-            place_loc = (centroid.y, centroid.x)
-            
-            # Calculate distance using geopy
-            dist_km = geodesic(origin, place_loc).km
-            dist_miles = dist_km * 0.621371
-            
-            # Calculate estimated walk time (20 mins per mile = 3.0 mph)
-            # Rounded to the nearest whole integer
-            walk_time_mins = int(round(dist_miles * 20))
-            
-            # Clean up the name tag
-            name = row.get('name')
-            name = name if isinstance(name, str) else "Unknown"
+    print("5. Calculating Nearest Neighbors and Distances (Vectorized)...")
+    
+    # --- A. Campus Distance ---
+    campus_boundary = campus_proj.geometry.iloc[0].boundary
+    # Calculates distance from every apartment to the campus line instantly
+    apartments_proj['dist_meters_campus'] = apartments_proj.geometry.distance(campus_boundary)
 
-            place_data = {
-                'name': name,
-                'distance_miles': round(dist_miles, 2),
-                'estimated_walk_time_mins': walk_time_mins
-            }
+    # --- B. Nearest POIs using Spatial Join (sjoin_nearest) ---
+    # This magically finds the closest point from the right dataframe to the left dataframe
+    
+    # Supermarkets
+    apts_with_super = gpd.sjoin_nearest(apartments_proj, supermarkets, how='left', distance_col='dist_meters_supermarket')
+    apts_with_super = apts_with_super.rename(columns={'name': 'nearest_supermarket'}).drop(columns=['index_right'], errors='ignore')
 
-            # Categorize the POI based on its OSM tags
-            if 'shop' in row and row['shop'] in ['supermarket', 'grocery']:
-                supermarkets.append(place_data)
-            elif 'amenity' in row and row['amenity'] == 'pharmacy':
-                pharmacies.append(place_data)
-            elif 'leisure' in row and row['leisure'] in ['fitness_centre', 'sports_centre']:
-                gyms.append(place_data)
+    # Pharmacies (Join onto the running dataframe)
+    apts_with_pharm = gpd.sjoin_nearest(apts_with_super, pharmacies, how='left', distance_col='dist_meters_pharmacy')
+    apts_with_pharm = apts_with_pharm.rename(columns={'name': 'nearest_pharmacy'}).drop(columns=['index_right'], errors='ignore')
 
-    # 3. Find the nearest for each category
-    nearest_supermarket = min(supermarkets, key=lambda x: x['distance_miles']) if supermarkets else None
-    nearest_pharmacy = min(pharmacies, key=lambda x: x['distance_miles']) if pharmacies else None
-    nearest_gym = min(gyms, key=lambda x: x['distance_miles']) if gyms else None
+    # Gyms
+    final_apts = gpd.sjoin_nearest(apts_with_pharm, gyms, how='left', distance_col='dist_meters_gym')
+    final_apts = final_apts.rename(columns={'name': 'nearest_gym'}).drop(columns=['index_right'], errors='ignore')
 
-    # 4. ---- CALCULATE DISTANCE TO UW MADISON BORDER ----
-    print("Fetching UW Madison campus polygon...")
-    campus_distance_miles = None
-    campus_walk_time_mins = None
-    try:
-        # Fetch the UW Madison Polygon directly via its specific OSM Relation ID
-        campus_gdf = ox.geocode_to_gdf("R7144092", by_osmid=True)
-        
-        point_gdf = gpd.GeoDataFrame(geometry=[Point(lon, lat)], crs="EPSG:4326")
-        
-        # Project using the updated v2.0 ox.projection syntax
-        point_proj = ox.projection.project_gdf(point_gdf)
-        campus_proj = ox.projection.project_gdf(campus_gdf, to_crs=point_proj.crs)
-        
-        point_geom = point_proj.geometry.iloc[0]
-        campus_geom = campus_proj.geometry.iloc[0]
-        
-        campus_boundary = campus_geom.boundary
-        
-        # Calculate distance and walk time
-        dist_meters = point_geom.distance(campus_boundary)
-        campus_distance_miles = round(dist_meters * 0.000621371, 2)
-        campus_walk_time_mins = int(round(campus_distance_miles * 20))
-        
-    except Exception as e:
-        print(f"Error fetching/calculating campus distance: {e}")
+    print("6. Converting meters to miles and calculating walk times...")
+    # Conversion Constants
+    M_TO_MILES = 0.000621371
+    MINS_PER_MILE = 20
 
-    # 5. Return the compiled results
-    return {
-        "nearest_supermarket": nearest_supermarket,
-        "nearest_pharmacy": nearest_pharmacy,
-        "nearest_gym": nearest_gym,
-        "campus_border_distance_miles": campus_distance_miles,
-        "campus_border_walk_time_mins": campus_walk_time_mins
-    }
+    # Apply conversions across the whole dataframe at once
+    for category in ['campus', 'supermarket', 'pharmacy', 'gym']:
+        dist_col = f'dist_meters_{category}'
+        miles_col = f'dist_miles_{category}'
+        time_col = f'walk_time_mins_{category}'
+        
+        # Calculate Miles (rounded to 2 decimals)
+        final_apts[miles_col] = (final_apts[dist_col] * M_TO_MILES).round(2)
+        # Calculate Time (rounded to integer)
+        final_apts[time_col] = (final_apts[miles_col] * MINS_PER_MILE).round().astype(int)
+        
+        # Drop the raw meters column to keep the file clean
+        final_apts = final_apts.drop(columns=[dist_col])
+
+    # De-duplicate any potential multi-matches from sjoin
+    final_apts = final_apts[~final_apts.index.duplicated(keep='first')]
+
+    # 7. Saving final output...
+    print("7. Cleaning up internal columns and saving...")
+    
+    # List of columns created by the spatial joins that we don't need in our final app
+    cols_to_drop = [
+        'element_left', 'id_left', 'element_right', 
+        'id_right', 'element', 'id', 'index_right'
+    ]
+    final_apts = final_apts.drop(columns=cols_to_drop, errors='ignore')
+
+    # Convert back to standard GPS coordinates before saving
+    final_apts = final_apts.to_crs("EPSG:4326")
+    final_apts.to_file(output_geojson_path, driver="GeoJSON")
+    
+    print(f"Success! Enriched data for {len(final_apts)} apartments saved to {output_geojson_path}")
 
 # --- Example Usage ---
 if __name__ == "__main__":
-    test_lat, test_lon = 43.075153, -89.395803
-    
-    results = get_closest_amenities_and_campus_distance(test_lat, test_lon)
-    
-    print("\n--- RESULTS ---")
-    for key, value in results.items():
-        print(f"{key}: {value}")
-
+    # Replace these with your actual file paths
+    enrich_apartments_with_amenities("residential.geojson", "enriched_apartments.geojson")
+    pass
