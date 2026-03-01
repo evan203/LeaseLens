@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import TenantAuth from './TenantAuth';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import Link from 'next/link';
+import Auth from '../components/Auth'; ``
 
 const MADISON_CENTER = {
   latitude: 43.0731,
@@ -45,7 +48,6 @@ async function fetchParcels() {
   console.log('Loaded parcel data:', data);
   return data;
 }
-
 function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress }) {
   if (!parcel) return null;
 
@@ -130,7 +132,7 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
       <div className="border-t border-gray-200 p-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold text-gray-800">Landlord</h3>
-          <button 
+          <button
             onClick={() => {
               const newState = !showLandlordDetails;
               setShowLandlordDetails(newState);
@@ -160,8 +162,8 @@ function InfoPanel({ parcel, onClose, onShowLandlordProperties, onSelectAddress 
               <div className="font-medium text-gray-800 mb-1">Other Properties:</div>
               <div className="max-h-24 overflow-y-auto space-y-1">
                 {mockLandlord.addresses.map((addr, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     onClick={() => onSelectAddress?.(addr)}
                     className="text-gray-600 truncate cursor-pointer hover:text-blue-600 hover:underline"
                   >
@@ -217,7 +219,7 @@ export default function ParcelMap() {
 
   const flyToAddress = (address) => {
     if (!mapRef.current || !parcelData) return;
-    
+
     const feature = parcelData.features.find(f => f.properties.Address === address);
     if (feature) {
       const [lng, lat] = feature.geometry.coordinates[0][0];
@@ -281,13 +283,13 @@ export default function ParcelMap() {
           <h1 className="font-bold text-xl text-gray-800">LeaseLens</h1>
         </div>
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-          <input 
-            type="text" 
-            placeholder="Search address..." 
+          <input
+            type="text"
+            placeholder="Search address..."
             className="w-full text-sm px-2 py-1 border border-gray-200 rounded focus:outline-none focus:border-blue-500"
           />
         </div>
-        <TenantAuth />
+        <Auth />
         <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-left">
           <p className="text-sm text-gray-600 mb-3">Upload your data to help fellow renters!</p>
           <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
