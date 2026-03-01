@@ -13,6 +13,8 @@ import {
 } from '@/components/mapLayers';
 import InfoPanel from '@/components/InfoPanel';
 import MapHeader from '@/components/MapHeader';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export default function ParcelMap() {
@@ -89,37 +91,46 @@ export default function ParcelMap() {
 
   const handleLeaseSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedParcel?.properties?.parcel_id) return;
+    if (!leaseFormData.address) {
+      alert('Please enter an address');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parcelId: selectedParcel.properties.parcel_id,
-          ...leaseFormData
-        })
+      await addDoc(collection(db, 'reviews'), {
+        parcelId: leaseFormData.address,
+        address: leaseFormData.address,
+        bedrooms: leaseFormData.bedrooms,
+        bathrooms: leaseFormData.bathrooms,
+        rent: leaseFormData.rent,
+        waterBill: leaseFormData.waterBill,
+        electricityBill: leaseFormData.electricityBill,
+        gasBill: leaseFormData.gasBill,
+        rating: leaseFormData.rating,
+        maintenanceTime: leaseFormData.maintenanceTime,
+        maintenanceQuality: leaseFormData.maintenanceQuality,
+        comment: leaseFormData.comment,
+        createdAt: new Date()
       });
 
-      if (response.ok) {
-        setShowLeaseForm(false);
-        setLeaseFormData({
-          address: '',
-          bedrooms: '',
-          bathrooms: '',
-          rent: '',
-          waterBill: '',
-          electricityBill: '',
-          gasBill: '',
-          rating: 5,
-          maintenanceTime: '',
-          maintenanceQuality: '',
-          comment: '',
-        });
-      }
+      setShowLeaseForm(false);
+      setLeaseFormData({
+        address: '',
+        bedrooms: '',
+        bathrooms: '',
+        rent: '',
+        waterBill: '',
+        electricityBill: '',
+        gasBill: '',
+        rating: 5,
+        maintenanceTime: '',
+        maintenanceQuality: '',
+        comment: '',
+      });
     } catch (error) {
       console.error('Error submitting review:', error);
+      alert('Error submitting review');
     } finally {
       setIsSubmitting(false);
     }
