@@ -13,7 +13,6 @@ import {
 } from '@/components/mapLayers';
 import InfoPanel from '@/components/InfoPanel';
 import MapHeader from '@/components/MapHeader';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
 import LeaseForm from '@/components/LeaseForm';
 
 export default function ParcelMap() {
@@ -23,10 +22,12 @@ export default function ParcelMap() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [highlightedAddresses, setHighlightedAddresses] = useState(null);
   const [showLeaseForm, setShowLeaseForm] = useState(false);
+  const [landlordListOpen, setLandlordListOpen] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
     setHighlightedAddresses(null);
+    setLandlordListOpen(false);
   }, [selectedParcel]);
 
   useEffect(() => {
@@ -127,11 +128,29 @@ export default function ParcelMap() {
         onClose={() => {
           setSelectedParcel(null);
           setHighlightedAddresses(null);
+          setLandlordListOpen(false);
         }}
         onShowLandlordProperties={setHighlightedAddresses}
-        onSelectAddress={flyToAddress}
+        onSelectAddress={(addr) => {
+          flyToAddress(addr);
+          setLandlordListOpen(false);
+        }}
         parcelData={parcelData}
+        showLandlordListOnly={landlordListOpen}
       />
+
+      {!selectedParcel && !landlordListOpen && (
+        <button
+          onClick={() => {
+            setSelectedParcel(null);
+            setHighlightedAddresses(null);
+            setLandlordListOpen(true);
+          }}
+          className="absolute top-4 right-4 z-10 bg-white px-4 py-2 rounded-lg shadow-md border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          View Landlords List
+        </button>
+      )}
 
       <MapHeader
         parcelData={parcelData}
